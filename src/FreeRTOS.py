@@ -26,6 +26,12 @@ class Scheduler:
     self._delayed2 = ListInspector("xDelayedTaskList2")
     self._readyLists = []
     readyTasksListsStr = "pxReadyTasksLists"
+    # Current TCB
+    self._currentTCB,tcbMethod=gdb.lookup_symbol("pxCurrentTCB")
+    if( self._currentTCB != None):
+        self._currentTCBv=self._currentTCB.value()
+        print("Current TCB=0x%x" % self._currentTCBv)
+     # Ready 
     readyListsSym,methodType = gdb.lookup_symbol(readyTasksListsStr)
     if ( readyListsSym != None ): 
       readyLists = readyListsSym.value()
@@ -40,28 +46,34 @@ class Scheduler:
 
   def ShowTaskList(self): 
     self.PrintTableHeader()
+    print("Running Task")
+    print("-------------")
+    self.PrintTaskFormatted(self._currentTCBv)
+    # Other tasks
     for i,rlist in enumerate(self._readyLists):
-      if i == 0:
-        items = rlist.GetElements( "TCB_t", 0 )
-      else: 
-        items = rlist.GetElements( "TCB_t", 1 )
+      items = rlist.GetElements( "TCB_t")
       if ( len(items) > 0 ): 
         print("Ready List {%d}: Num Tasks: %d" % (i, len(items)))
+        print("-----------------------------------")
         for tcb,val in items:           
+          ## print(tcb, tcb.type.name, val, val.type.name)
           self.PrintTaskFormatted(tcb)
 
     items = self._blocked.GetElements("TCB_t")
     print("Blocked List: Num Tasks: %d" % len(items))
+    print("-----------------------------------")
     for tcb,val in items:           
       self.PrintTaskFormatted(tcb)
 
     items = self._delayed1.GetElements("TCB_t")
     print("Delayed {1}: Num Tasks: %d" % len(items))
+    print("-----------------------------------")
     for tcb,val in items:           
       self.PrintTaskFormatted(tcb, val)
 
     items = self._delayed2.GetElements("TCB_t")
     print("Delayed {2}: Num Tasks: %d" % len(items))
+    print("-----------------------------------")
     for tcb,val in items:           
       self.PrintTaskFormatted(tcb, val)
 
@@ -69,18 +81,44 @@ class Scheduler:
   def PrintTableHeader(self):
     print("%16s %3s %4s" % ("Name", "PRI", "STCK"))
 
+  def read32bitsAddresss(self,address):
+    uint_pointer_type = gdb.lookup_type('uint32_t').pointer()
+    gaddress = gdb.Value(address)
+    paddress = gaddress.cast(uint_pointer_type)
+    try:
+        c=long(paddress.dereference())
+    except:
+        c=0
+    return c 
+
   def PrintTaskFormatted(self, task, itemVal = None):
+    ## print("TASK %s TCB address: 0x%x\n" % (str(task), task.address))
+    #print("Task")
+    #print(task)
     topStack=task['pxTopOfStack']
     stackBase = task['pxStack']
     highWater = topStack - stackBase
     taskName = task['pcTaskName'].string()
     taskPriority = task['uxPriority']
     if ( itemVal != None ):
-      print("%16s %3s %4s %5s" % (taskName, taskPriority, highWater, itemVal))
+      print("%16s Pri:%3s High:%4s stack:0x%x val:%5s " % (taskName, taskPriority, highWater, topStack, itemVal))
     else:
-      print("%16s %3s %4s" % (taskName, taskPriority, highWater))
+      print("%16s Pri:%3s High:%4s stack:0x%x" % (taskName, taskPriority, highWater,topStack))
+    # Now retrieve actual stack pointer, PC and LR
+    # The layout is 
+    # Top Base : 8*4 = R4...R11
+    #            4*4 = R0...R3
+    #            1*4 = R12
+    #            1*4 = LR
+    #            1*4 = PC
+    #            1*4 = PSR
+    #print("base 0x%x" % (topStack))
+    importantRegisters=topStack+(13) # skip registers
+    LR=self.read32bitsAddresss(importantRegisters)
+    PC=self.read32bitsAddresss(importantRegisters+1)
+    actualStack=topStack+16
+    print("\t\t LR=0x%x PC=0x%x SP=0x%x" % (LR, PC, actualStack))
 
-    
 class ShowTaskList(gdb.Command):
   """ Generate a print out of the current tasks and their states.
   """
