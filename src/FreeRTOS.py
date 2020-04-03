@@ -51,7 +51,10 @@ class Scheduler:
     self.PrintTaskFormatted(self._currentTCBv)
     # Other tasks
     for i,rlist in enumerate(self._readyLists):
-      items = rlist.GetElements( "TCB_t")
+      if i == 0:
+        items = rlist.GetElements( "TCB_t", 0 )
+      else: 
+        items = rlist.GetElements( "TCB_t", 1 )
       if ( len(items) > 0 ): 
         print("Ready List {%d}: Num Tasks: %d" % (i, len(items)))
         print("-----------------------------------")
