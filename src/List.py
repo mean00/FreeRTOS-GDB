@@ -76,7 +76,7 @@ class ListInspector:
       numElems = self._list['uxNumberOfItems']
       #print("List Elements: %d" % numElems)
       index = self._list['pxIndex']
-        
+      castObjPtr = 0 
       if ( numElems > 0  and numElems < 200 ):
 
         if ( startElem == 0 ):
@@ -98,8 +98,7 @@ class ListInspector:
             ownerObj = ownerUInt          
           
           itemVal = curr['xItemValue']
-          resp.append( (ownerObj, itemVal.cast(StdTypes.uint32_t)) )
-
+          resp.append( (ownerObj, itemVal.cast(StdTypes.uint32_t),castObjPtr) )
           curr = curr['pxPrevious']
 
       return(resp)

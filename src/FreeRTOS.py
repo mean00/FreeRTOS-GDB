@@ -55,7 +55,7 @@ class Scheduler:
     print("Running Task")
     print("-------------")
     print("Current TCB=0x%x" % self._currentTCBv)
-    self.PrintTaskFormatted(self._currentTCBv)
+    self.PrintTaskFormatted(self._currentTCBv,0)
     # Other tasks
     for i,rlist in enumerate(self._readyLists):
       if i == 0:
@@ -65,27 +65,27 @@ class Scheduler:
       if ( len(items) > 0 ): 
         print("Ready List {%d}: Num Tasks: %d" % (i, len(items)))
         print("-----------------------------------")
-        for tcb,val in items:           
+        for tcb,val,ptr in items:           
           ## print(tcb, tcb.type.name, val, val.type.name)
-          self.PrintTaskFormatted(tcb)
+          self.PrintTaskFormatted(tcb,None,ptr)
 
     items = self._blocked.GetElements("TCB_t")
     print("Blocked List: Num Tasks: %d" % len(items))
     print("-----------------------------------")
-    for tcb,val in items:           
-      self.PrintTaskFormatted(tcb)
+    for tcb,val,ptr in items:           
+      self.PrintTaskFormatted(tcb,None,ptr)
 
     items = self._delayed1.GetElements("TCB_t")
     print("Delayed {1}: Num Tasks: %d" % len(items))
     print("-----------------------------------")
-    for tcb,val in items:           
-      self.PrintTaskFormatted(tcb, val)
+    for tcb,val,ptr in items:           
+      self.PrintTaskFormatted(tcb, val,ptr)
 
     items = self._delayed2.GetElements("TCB_t")
     print("Delayed {2}: Num Tasks: %d" % len(items))
     print("-----------------------------------")
-    for tcb,val in items:           
-      self.PrintTaskFormatted(tcb, val)
+    for tcb,val,ptr in items:           
+      self.PrintTaskFormatted(tcb, val,ptr)
 
   def GetSymbolForAddress(self,adr):
      block = gdb.block_for_pc(adr)
@@ -112,16 +112,16 @@ class Scheduler:
   def PrintTableHeader(self):
     print("%16s %3s %4s" % ("Name", "PRI", "STCK"))
 
-  def PrintTaskFormatted(self, task, itemVal = None):
+  def PrintTaskFormatted(self, task, itemVal = None,ptr=0):
     topStack=task['pxTopOfStack']
     stackBase = task['pxStack']
     highWater = topStack - stackBase
     taskName = task['pcTaskName'].string()
     taskPriority = task['uxPriority']
     if ( itemVal != None ):
-      print("%16s Pri:%3s High:%4s topOfStack:0x%x val:%5s"  % (taskName, taskPriority, highWater, topStack, itemVal))
+      print("TCB=0x%08x %16s Pri:%3s High:%4s topOfStack:0x%x val:%5s"  % (ptr,taskName, taskPriority, highWater, topStack, itemVal))
     else:
-      print("%16s Pri:%3s High:%4s topOfStack:0x%x " % (taskName, taskPriority, highWater,topStack))
+      print("TCB=0x%08x %16s Pri:%3s High:%4s topOfStack:0x%x " % (ptr, taskName, taskPriority, highWater,topStack))
     # Now retrieve actual stack pointer, PC and LR
     # The layout is 
     # Top Base : 8*4 = R4...R11
