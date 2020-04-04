@@ -19,7 +19,7 @@ from Types import StdTypes
 from List import ListInspector 
 from GDBCommands import ShowHandleName, ShowRegistry, ShowList
 from GDBCommands import ShowQueueInfo
-from ArmRegisters import ArmRegisters
+from ArmRegisters import aRegisters
 
 #
 # Helper class to deal with registers
@@ -145,7 +145,7 @@ class Scheduler:
   def switchTCB(self,address):
     print("switch TCB 0x%x " % address)
     # 1-load registers
-    regs=ArmRegisters()
+    regs=aRegisters()
     print("+++")
     regs.loadRegistersFromMemory(address) # regs now contains the address
     print("+++")
