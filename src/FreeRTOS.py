@@ -15,8 +15,52 @@ from Types import StdTypes
 from List import ListInspector 
 from GDBCommands import ShowHandleName, ShowRegistry, ShowList
 from GDBCommands import ShowQueueInfo
-    
 
+#
+# Helper class to deal with registers
+#    
+class ArmRegisters:
+    def  __init__(self):
+            _self.reg= [0] * 16
+            _self.psr = 0 
+    def loadFromAddress(adr):
+      uint_pointer_type = gdb.lookup_type('uint32_t').pointer()
+      gaddress = gdb.Value(address)
+      paddress = gaddress.cast(uint_pointer_type)
+      try:
+          c=long(paddress.dereference())
+      except:
+          c=0
+      return c 
+
+    # load all the registers from the psp TCB pointer 
+    def loadRegistersFromMemory(adr):
+        for i in range[0,8]: # R4..R11 => 8 registers
+            self.ref[i+4]=self.loadFromAddress(adr+i)
+        # next are r0 .. r3
+        adr+=8
+        for i in range[0,4]: # R4..R11 => 8 registers
+            self.ref[i]=self.loadFromAddress(adr)
+        adr+=4
+        # Then r12, lr pc psr
+        self.r[12]=self.loadFromAddress(adr)
+        self.r[14]=self.loadFromAddress(adr+1) # LR
+        self.r[15]=self.loadFromAddress(adr+2) # PC
+        self.psr=self.loadFromAddress(adr+3)
+        # and sp after popping all the registers
+        self.r[13]=adr+4
+
+    #
+    def setRegister(reg, value):
+            st="gdb.execute(set $"+str(reg)+"="+value+")"
+            gdb.execute(st) 
+
+    # set the CPU register with the value stored in the object
+    def setCPURegisters():
+        for i in range[0,16]:
+                self.setRegister("r"+str(i),self.r[i])
+        self.setRegister("xpsr",self.psr)
+        # and psr 
 class Scheduler:
   
   def __init__(self): 
@@ -112,9 +156,9 @@ class Scheduler:
     taskName = task['pcTaskName'].string()
     taskPriority = task['uxPriority']
     if ( itemVal != None ):
-      print("%16s Pri:%3s High:%4s stack:0x%x val:%5s"  % (taskName, taskPriority, highWater, topStack, itemVal))
+      print("%16s Pri:%3s High:%4s topOfStack:0x%x val:%5s"  % (taskName, taskPriority, highWater, topStack, itemVal))
     else:
-      print("%16s Pri:%3s High:%4s stack:0x%x " % (taskName, taskPriority, highWater,topStack))
+      print("%16s Pri:%3s High:%4s topOfStack:0x%x " % (taskName, taskPriority, highWater,topStack))
     # Now retrieve actual stack pointer, PC and LR
     # The layout is 
     # Top Base : 8*4 = R4...R11
@@ -127,6 +171,7 @@ class Scheduler:
     importantRegisters=topStack+(13) # skip registers
     LR=self.read32bitsAddresss(importantRegisters)
     PC=self.read32bitsAddresss(importantRegisters+1)
+    # This is the address of the user stack, i.e. after the 16 registers saved by FreeRTOS
     actualStack=topStack+16
     print("\t\t LR=0x%x PC=0x%x SP=0x%x" % (LR, PC, actualStack))
     print("\t\t %s" %   self.GetSymbolForAddress(PC))
