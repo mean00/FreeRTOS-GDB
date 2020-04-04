@@ -30,7 +30,6 @@ class Scheduler:
     self._currentTCB,tcbMethod=gdb.lookup_symbol("pxCurrentTCB")
     if( self._currentTCB != None):
         self._currentTCBv=self._currentTCB.value()
-        print("Current TCB=0x%x" % self._currentTCBv)
      # Ready 
     readyListsSym,methodType = gdb.lookup_symbol(readyTasksListsStr)
     if ( readyListsSym != None ): 
@@ -48,6 +47,7 @@ class Scheduler:
     self.PrintTableHeader()
     print("Running Task")
     print("-------------")
+    print("Current TCB=0x%x" % self._currentTCBv)
     self.PrintTaskFormatted(self._currentTCBv)
     # Other tasks
     for i,rlist in enumerate(self._readyLists):
@@ -93,6 +93,14 @@ class Scheduler:
     except:
         c=0
     return c 
+  def GetSymbolForAddress(self, adr):
+      block = gdb.block_for_pc(adr)
+      try:
+         while block and not block.function:
+            block = block.superblock
+         return block.function.print_name
+      except:
+        return "???"
 
   def PrintTaskFormatted(self, task, itemVal = None):
     ## print("TASK %s TCB address: 0x%x\n" % (str(task), task.address))
@@ -104,9 +112,9 @@ class Scheduler:
     taskName = task['pcTaskName'].string()
     taskPriority = task['uxPriority']
     if ( itemVal != None ):
-      print("%16s Pri:%3s High:%4s stack:0x%x val:%5s " % (taskName, taskPriority, highWater, topStack, itemVal))
+      print("%16s Pri:%3s High:%4s stack:0x%x val:%5s"  % (taskName, taskPriority, highWater, topStack, itemVal))
     else:
-      print("%16s Pri:%3s High:%4s stack:0x%x" % (taskName, taskPriority, highWater,topStack))
+      print("%16s Pri:%3s High:%4s stack:0x%x " % (taskName, taskPriority, highWater,topStack))
     # Now retrieve actual stack pointer, PC and LR
     # The layout is 
     # Top Base : 8*4 = R4...R11
@@ -121,7 +129,8 @@ class Scheduler:
     PC=self.read32bitsAddresss(importantRegisters+1)
     actualStack=topStack+16
     print("\t\t LR=0x%x PC=0x%x SP=0x%x" % (LR, PC, actualStack))
-
+    print("\t\t %s" %   self.GetSymbolForAddress(PC))
+    print("\t\t\t %s" %   self.GetSymbolForAddress(LR))
 class ShowTaskList(gdb.Command):
   """ Generate a print out of the current tasks and their states.
   """
