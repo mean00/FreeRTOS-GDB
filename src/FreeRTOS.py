@@ -1,4 +1,8 @@
 # File: FreeRTOS.py
+# Modified by mean00 to add 
+#    * More details on TCB
+#    * switchTCB command to switch threads
+#  2020
 # Author: Carl Allendorph
 # Date: 05NOV2014 
 #
@@ -15,52 +19,11 @@ from Types import StdTypes
 from List import ListInspector 
 from GDBCommands import ShowHandleName, ShowRegistry, ShowList
 from GDBCommands import ShowQueueInfo
+from ArmRegisters import ArmRegisters
 
 #
 # Helper class to deal with registers
 #    
-class ArmRegisters:
-    def  __init__(self):
-            _self.reg= [0] * 16
-            _self.psr = 0 
-    def loadFromAddress(adr):
-      uint_pointer_type = gdb.lookup_type('uint32_t').pointer()
-      gaddress = gdb.Value(address)
-      paddress = gaddress.cast(uint_pointer_type)
-      try:
-          c=long(paddress.dereference())
-      except:
-          c=0
-      return c 
-
-    # load all the registers from the psp TCB pointer 
-    def loadRegistersFromMemory(adr):
-        for i in range[0,8]: # R4..R11 => 8 registers
-            self.ref[i+4]=self.loadFromAddress(adr+i)
-        # next are r0 .. r3
-        adr+=8
-        for i in range[0,4]: # R4..R11 => 8 registers
-            self.ref[i]=self.loadFromAddress(adr)
-        adr+=4
-        # Then r12, lr pc psr
-        self.r[12]=self.loadFromAddress(adr)
-        self.r[14]=self.loadFromAddress(adr+1) # LR
-        self.r[15]=self.loadFromAddress(adr+2) # PC
-        self.psr=self.loadFromAddress(adr+3)
-        # and sp after popping all the registers
-        self.r[13]=adr+4
-
-    #
-    def setRegister(reg, value):
-            st="gdb.execute(set $"+str(reg)+"="+value+")"
-            gdb.execute(st) 
-
-    # set the CPU register with the value stored in the object
-    def setCPURegisters():
-        for i in range[0,16]:
-                self.setRegister("r"+str(i),self.r[i])
-        self.setRegister("xpsr",self.psr)
-        # and psr 
 class Scheduler:
   
   def __init__(self): 
@@ -124,32 +87,32 @@ class Scheduler:
     for tcb,val in items:           
       self.PrintTaskFormatted(tcb, val)
 
-
-  def PrintTableHeader(self):
-    print("%16s %3s %4s" % ("Name", "PRI", "STCK"))
-
-  def read32bitsAddresss(self,address):
+  def GetSymbolForAddress(self,adr):
+     block = gdb.block_for_pc(adr)
+     try:
+        while block and not block.function:
+           block = block.superblock
+        return block.function.print_name
+     except:
+       print("*Error *")
+       return "???"
+#
+#
+#
+  def Read32(self,address):
     uint_pointer_type = gdb.lookup_type('uint32_t').pointer()
     gaddress = gdb.Value(address)
     paddress = gaddress.cast(uint_pointer_type)
     try:
         c=long(paddress.dereference())
     except:
+        print("*Error *")
         c=0
     return c 
-  def GetSymbolForAddress(self, adr):
-      block = gdb.block_for_pc(adr)
-      try:
-         while block and not block.function:
-            block = block.superblock
-         return block.function.print_name
-      except:
-        return "???"
+  def PrintTableHeader(self):
+    print("%16s %3s %4s" % ("Name", "PRI", "STCK"))
 
   def PrintTaskFormatted(self, task, itemVal = None):
-    ## print("TASK %s TCB address: 0x%x\n" % (str(task), task.address))
-    #print("Task")
-    #print(task)
     topStack=task['pxTopOfStack']
     stackBase = task['pxStack']
     highWater = topStack - stackBase
@@ -169,13 +132,30 @@ class Scheduler:
     #            1*4 = PSR
     #print("base 0x%x" % (topStack))
     importantRegisters=topStack+(13) # skip registers
-    LR=self.read32bitsAddresss(importantRegisters)
-    PC=self.read32bitsAddresss(importantRegisters+1)
+    LR=self.Read32(importantRegisters)
+    PC=self.Read32(importantRegisters+1)
     # This is the address of the user stack, i.e. after the 16 registers saved by FreeRTOS
     actualStack=topStack+16
     print("\t\t LR=0x%x PC=0x%x SP=0x%x" % (LR, PC, actualStack))
-    print("\t\t %s" %   self.GetSymbolForAddress(PC))
-    print("\t\t\t %s" %   self.GetSymbolForAddress(LR))
+    #print("\t\t %s" %   self.GetSymbolForAddress(PC))
+    #print("\t\t\t %s" %   self.GetSymbolForAddress(LR))
+#
+#
+#
+  def switchTCB(self,address):
+    print("switch TCB 0x%x " % address)
+    # 1-load registers
+    regs=ArmRegisters()
+    print("+++")
+    regs.loadRegistersFromMemory(address) # regs now contains the address
+    print("+++")
+    regs.setCPURegisters()   # set the actual registers
+    print("+++")
+
+#
+#
+#
+#
 class ShowTaskList(gdb.Command):
   """ Generate a print out of the current tasks and their states.
   """
@@ -189,12 +169,33 @@ class ShowTaskList(gdb.Command):
     sched = Scheduler()
     sched.ShowTaskList()
 
+#
+#
+#
+#
+class SwitchTCB(gdb.Command):
+  """ Switch to the TCB address given as parameter (hex address i.e 0x1234)
+  """
+  def __init__(self):
+    super(SwitchTCB, self).__init__(
+      "switchTCB", 
+      gdb.COMMAND_SUPPORT
+      )
 
-
-
+  def invoke(self, arg, from_tty):
+    argv = gdb.string_to_argv(arg)
+    if(len(argv)!=1):
+        print("Please give TCB address (topOfStack) as an hex arg\n");
+        return
+    address=int(argv[0],16) # hex
+    print("Adr=0x%x" % address)
+    sched = Scheduler()
+    sched.switchTCB(address)
+    #
 ShowRegistry()
 ShowList()
 ShowTaskList()
 ShowHandleName()
 ShowQueueInfo()
+SwitchTCB()
 
