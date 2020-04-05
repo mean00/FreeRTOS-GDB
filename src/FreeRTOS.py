@@ -180,12 +180,11 @@ class Scheduler:
     #
     # Rewind by 4*4*4 bytes = 64 bytes / 16 registers
     sp=old.reg[13]
-    old.reg[13]-=32
     sp-=64    
     # store them
     old.saveRegisterToMemory(sp) 
     # update xtopStack with new value
-    old.write32bits(self._currentTCBv,old.reg[13])
+    old.write32bits(self._currentTCBv,old.reg[13]-64)
     t=self.allTasks[task]
     # [0] => TCB pointer
     # [1] => State

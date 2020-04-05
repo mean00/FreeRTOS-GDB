@@ -40,7 +40,6 @@ class aRegisters:
   # You have to move the stack yourself !
   #
   def saveRegisterToMemory(self,adr):
-    # Rewind the stack by  16 registers
     for i in range(0,8): # R4..R11 => 8 registers
         self.write32bits(adr+i*4,self.reg[(i+4)])
     # next are r0 .. r3
@@ -97,7 +96,7 @@ class aRegisters:
       self.reg[i]=long(gdb.selected_frame().read_register(r) )
       self.reg[i]=self.reg[i] & 0xffffffff # unsigned hack
     self.psr=long(gdb.selected_frame().read_register("xpsr"))
-    print("Read registers")
-    for i in range(0,16):
-        print("%d: 0x%x" % (i,self.reg[i]))
+    #print("Read registers")
+    #for i in range(0,16):
+        #print("%d: 0x%x" % (i,self.reg[i]))
 
