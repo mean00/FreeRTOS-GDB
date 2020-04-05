@@ -172,11 +172,8 @@ class Scheduler:
     stack=tcbContent['pxTopOfStack']
     # 1-load registers
     regs=aRegisters()
-    print("+++")
     regs.loadRegistersFromMemory(stack) # regs now contains the address
-    print("+++")
     regs.setCPURegisters()   # set the actual registers
-    print("+++")
 
 #
 #
