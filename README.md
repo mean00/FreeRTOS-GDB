@@ -1,12 +1,20 @@
-FreeRTOS-GDB
-============
+armFreeRTOS-GDB
+================
 
-Python API Library for inspecting FreeRTOS Objects in GDB
+Intro by mean00:
 
-Basically, the FreeRTOS internal state is kind of hard to inspect 
-when working with GDB. This project provides some scripts for GDB's 
-Python API that make accessing some of these internals a little easier
-to inspect. 
+This is a modified version of FreeRTOS-GDB (https://github.com/autolycus/FreeRTOS-GDB) for my needs
+Bottom line, i use a blackmagic clone debugger and it does not support FreeRTOS
+I just want to have backtrack for all the tasks on the system
+to see what they are doing and why they are stuck
+
+The aim is to be similar to the "info thread" "thread x" commands of gdb
+
+Diclaimer : I probably broke the other functions + i'm not a python developper
+
+
+
+
 
 ##Requirements: 
 
@@ -31,6 +39,7 @@ python compiled in your version of GDB.
 ```
 	$> export PYTHONPATH=~/src/FreeRTOS-GDB/src/
 ```
+5. It only works for cortex M0/Mxxx WITHOUT FPU. There is an extra register saved if a FPU is there which will break the decoding
 
 How To Use: 
 ```
@@ -39,82 +48,33 @@ $> gdb ./bin/program.elf
 Program runs on embedded device, sets up tasks, and queues 
 <Break>
 (gdb) source ~/FreeRTOS-GDB/src/FreeRTOS.py 
-(gdb) show Task-List
-            Name PRI STCK
-Ready List {0}: Num Tasks: 1
-            IDLE   0  107
-Blocked List: Num Tasks: 11
-       EMAC Task   1  239
-      AFEC0 Task   1  295
-     LDSENS Task   1  195
-      AFEC1 Task   1  295
- LineSample Task   1  281
-        DMAUART0   1  225
-        Log Task   1  273
-        BAT Task   1  169
-         Rx Task   1  421
-        Mng Task   2  551
-       Cell Task   1  275
-Delayed {1}: Num Tasks: 5
-         Tmr Svc   3  355 62254
-       WLAN Task   1  205 13817
-       Init Task   1  445 10015
-        LED Task   1  179  7105
-         DMACOM1   1  265  7065
-Delayed {2}: Num Tasks: 0
+(gdb) show Task-List 
+0   TCB: 0x20001160 Name:    MainTask State:Delay1 TopOfStack:0x200010f0
+                 LR=0x8005fa7 PC=0x8006078 SP=0x20001130 function=vTaskDelay
+1   TCB: 0x20001348 Name:      dummy1 State:Delay1 TopOfStack:0x200012f0
+                 LR=0x8005fa7 PC=0x8006078 SP=0x20001330 function=vTaskDelay
+2   TCB: 0x20001530 Name:      dummy2 State:Delay1 TopOfStack:0x200014d8
+                 LR=0x8005fa7 PC=0x8006078 SP=0x20001518 function=vTaskDelay
+3 * TCB: 0x20001988 Name:        IDLE 
 
-(gdb) show Queue-Info mutex
-Num Queues: 6
-            NAME  CNT             SEND          RECEIVE
-        LOG:LOCK    1             NONE             NONE
-     STREAM:LOCK    1             NONE             NONE
-       TWI:MUTEX    1             NONE             NONE
-     CC3000:LOCK    1             NONE             NONE
-       WLAN:LOCK    0             NONE             NONE
-        SPI:LOCK    1             NONE             NONE
-
-(gdb) show Queue-Info queue
-Num Queues: 14
-            NAME  CNT             SEND          RECEIVE
-            TmrQ    0                           Tmr Svc
-     LOG:MSGPOOL   12             NONE             NONE
-        LOG:MSGQ    0                          Log Task
-       TWI:QUEUE    0             NONE             NONE
-       SPI:QUEUE    0             NONE             NONE
-    DMAAFEC:POOL    1             NONE             NONE
-   DMAAFEC:QUEUE    0                        AFEC0 Task
-    DMAAFEC:POOL    1             NONE             NONE
-   DMAAFEC:QUEUE    0                        AFEC1 Task
-      COM:TXPOOL    3             NONE             NONE
-         COM:TXQ    0             NONE             NONE
-      COM:RXPOOL    5             NONE             NONE
-         COM:RXQ    0             NONE             NONE
-     FATFS:MUTEX    0             NONE             NONE
-
+        
 ```
+The task marked with a "*" is the running one
+If you want to switch to another one, just 
+```
+(gdb)switchTCB 2
+switch TCB 2 
+Updating current TCB to 20001530
+(gdb)show Task-List
+0   TCB: 0x20001160 Name:    MainTask State:Delay1 TopOfStack:0x200010f0
+                 LR=0x8005fa7 PC=0x8006078 SP=0x20001130 function=vTaskDelay
+1   TCB: 0x20001348 Name:      dummy1 State:Delay1 TopOfStack:0x200012f0
+                 LR=0x8005fa7 PC=0x8006078 SP=0x20001330 function=vTaskDelay
+2 * TCB: 0x20001530 Name:      dummy2 
+3   TCB: 0x20001988 Name:        IDLE State:Ready  TopOfStack:0x20001938
+                 LR=0x8006361 PC=0x8005c22 SP=0x20001978 function=prvCheckTasksWaitingTermination
+```
+Now you can use backtrack, up , down etc.. on the 2nd task.
 
-@note - the NONE's above may just be empty strings.
-
-This code adds the following custom GDB commands: 
-
-* show List-Handle (symbol|address) [CastType]
-	CastType is an optional argument that will cast all of the 
-	handles in a list to a particular type. 
-* show Task-List
-* show Handle-Registry
-* show Handle-Name  (symbole|address) 
-* show Queue-Info [filter]
-   filter can be "queue","mutex","semaphore", "counting", "recursive"
-
-
-
-@TODO
-=====
-
-* With GDB's Python API - it doesn't seem to handle code is separate
-    files very well. 
-
-* Currently, the EventGroup objects don't have an inspector. 
-    Work in progress - ideal solution would likely modify the struct
-    of the Event Group to provide a similar piece of info that the 
-    Queue handle does so that we could use the same registry.
+Again, i'm not a python developper, the code is a hack but it does what i needed
+It might be helpful for others
