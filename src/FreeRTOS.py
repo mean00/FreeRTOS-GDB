@@ -52,10 +52,8 @@ class Scheduler:
 
   def ShowTaskList(self): 
     self.PrintTableHeader()
-    print("Running Task")
-    print("-------------")
-    print("Current TCB=0x%x" % self._currentTCBv)
-    self.PrintTaskFormatted(self._currentTCBv,0)
+    allTasks = []
+    #print("Current TCB=0x%x" % self._currentTCBv)
     # Other tasks
     for i,rlist in enumerate(self._readyLists):
       if i == 0:
@@ -63,29 +61,39 @@ class Scheduler:
       else: 
         items = rlist.GetElements( "TCB_t", 1 )
       if ( len(items) > 0 ): 
-        print("Ready List {%d}: Num Tasks: %d" % (i, len(items)))
-        print("-----------------------------------")
         for tcb,val,ptr in items:           
           ## print(tcb, tcb.type.name, val, val.type.name)
-          self.PrintTaskFormatted(tcb,None,ptr)
+          tem = [ptr,"Ready ",tcb,None]
+          allTasks.append(tem)
 
     items = self._blocked.GetElements("TCB_t")
-    print("Blocked List: Num Tasks: %d" % len(items))
-    print("-----------------------------------")
-    for tcb,val,ptr in items:           
-      self.PrintTaskFormatted(tcb,None,ptr)
+    for tcb,val,ptr in items:  
+          tem = [ptr,"Blked ",tcb,None]
+          allTasks.append(tem)
 
     items = self._delayed1.GetElements("TCB_t")
-    print("Delayed {1}: Num Tasks: %d" % len(items))
-    print("-----------------------------------")
     for tcb,val,ptr in items:           
-      self.PrintTaskFormatted(tcb, val,ptr)
+          tem = [ptr,"Delay1",tcb,None]
+          allTasks.append(tem)
 
     items = self._delayed2.GetElements("TCB_t")
-    print("Delayed {2}: Num Tasks: %d" % len(items))
-    print("-----------------------------------")
     for tcb,val,ptr in items:           
-      self.PrintTaskFormatted(tcb, val,ptr)
+          tem = [ptr,"Delay1",tcb,None]
+          allTasks.append(tem)
+
+    # Todo : Sort them
+    # dump thel
+    for t in allTasks:
+        tcbPointer=t[0]
+        status=t[1]
+        tcbContent=t[2]
+        current=" "
+        if(self._currentTCBv == tcbPointer):
+            current="*"
+        print("%s TCB: 0x%08x Name:%12s State:%s TopOfStack:0x%08x" % (current, tcbPointer,tcbContent['pcTaskName'].string(), status, tcbContent['pxTopOfStack']))
+
+
+    
 
   def GetSymbolForAddress(self,adr):
      block = gdb.block_for_pc(adr)
