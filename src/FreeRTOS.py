@@ -26,8 +26,8 @@ from ArmRegisters import aRegisters
 #    
 class Scheduler:
   
-  def __init__(self): 
-    
+  def __init__(self):
+    self.allTasks = [] 
     self._blocked = ListInspector("xSuspendedTaskList")
     self._delayed1 = ListInspector("xDelayedTaskList1")
     self._delayed2 = ListInspector("xDelayedTaskList2")
@@ -46,6 +46,7 @@ class Scheduler:
         readyList = readyLists[i]
         FRReadyList = ListInspector( readyList )
         self._readyLists.append(FRReadyList)
+      self.getTasks()
     else: 
       print("Failed to Find Symbol: %s" % readyTasksListsStr)
       raise ValueError("Invalid Symbol!")
@@ -53,12 +54,32 @@ class Scheduler:
   # sort by TCB
   def sortTCB(self,e):
     return e[0]
-
+#
+# dump the tasks
+#
   def ShowTaskList(self): 
-    self.PrintTableHeader()
-    allTasks = []
-    #print("Current TCB=0x%x" % self._currentTCBv)
-    # Other tasks
+     # dump them
+    dex=0
+    for t in self.allTasks:
+        tcbPointer=t[0]
+        status=t[1]
+        tcbContent=t[2]
+        # Current Task, info on the stack are irrelevant
+        if(self._currentTCBv == tcbPointer):
+            current="*"
+            print("%d %s TCB: 0x%08x Name:%12s " % (dex,current, tcbPointer,tcbContent['pcTaskName'].string()))
+        else:
+            #where=
+            current=" "
+            stack=tcbContent['pxTopOfStack']
+            where=""
+            print("%d %s TCB: 0x%08x Name:%12s State:%s TopOfStack:0x%08x" % (dex, current, tcbPointer,tcbContent['pcTaskName'].string(), status, stack))
+            self.getAdditionInfo(stack)
+        dex=dex+1
+#
+# Get a list of created tasks + some properties
+#
+  def getTasks(self): 
     for i,rlist in enumerate(self._readyLists):
       if i == 0:
         items = rlist.GetElements( "TCB_t", 0 )
@@ -68,41 +89,27 @@ class Scheduler:
         for tcb,val,ptr in items:           
           ## print(tcb, tcb.type.name, val, val.type.name)
           tem = [ptr,"Ready ",tcb,None]
-          allTasks.append(tem)
+          self.allTasks.append(tem)
 
     items = self._blocked.GetElements("TCB_t")
     for tcb,val,ptr in items:  
           tem = [ptr,"Blked ",tcb,None]
-          allTasks.append(tem)
+          self.allTasks.append(tem)
 
     items = self._delayed1.GetElements("TCB_t")
     for tcb,val,ptr in items:           
           tem = [ptr,"Delay1",tcb,None]
-          allTasks.append(tem)
+          self.allTasks.append(tem)
 
     items = self._delayed2.GetElements("TCB_t")
     for tcb,val,ptr in items:           
           tem = [ptr,"Delay1",tcb,None]
-          allTasks.append(tem)
+          self.allTasks.append(tem)
 
-    allTasks.sort(key=self.sortTCB)
-    # dump thel
-    for t in allTasks:
-        tcbPointer=t[0]
-        status=t[1]
-        tcbContent=t[2]
-        # Current Task, info on the stack are irrelevant
-        if(self._currentTCBv == tcbPointer):
-            current="*"
-            print("%s TCB: 0x%08x Name:%12s " % (current, tcbPointer,tcbContent['pcTaskName'].string()))
-        else:
-            #where=
-            current=" "
-            stack=tcbContent['pxTopOfStack']
-            where=""
-            print("%s TCB: 0x%08x Name:%12s State:%s TopOfStack:0x%08x" % (current, tcbPointer,tcbContent['pcTaskName'].string(), status, stack))
-            self.getAdditionInfo(stack)
-
+    self.allTasks.sort(key=self.sortTCB)
+#
+#
+#
   def GetSymbolForAddress(self,adr):
      block = gdb.block_for_pc(adr)
      try:
@@ -125,10 +132,10 @@ class Scheduler:
         print("*Error *")
         c=0
     return c 
-  def PrintTableHeader(self):
-    print("%16s %3s %4s" % ("Name", "PRI", "STCK"))
 
-
+#
+#
+#
   def getAdditionInfo(self, topStack):
     # Now retrieve actual stack pointer, PC and LR
     # The layout is 
@@ -148,10 +155,19 @@ class Scheduler:
 #
 #
 #
-  def switchTCB(self,address):
-    print("switch TCB 0x%x " % address)
+  def switchTCB(self,task):
+    print("switch TCB %d " % task)
     # Dereference address to get stack
-    sp=self.Read32 (address)
+    if(task>=len(self.allTasks)):
+        print("out of range")
+        return
+    t=self.allTasks[task]
+    if(t[0]==self._currentTCBv):
+        print("task already selected")
+        return
+    tcbContent=t[2]
+    stack=tcbContent['pxTopOfStack']
+    sp=stack
     # 1-load registers
     regs=aRegisters()
     print("+++")
@@ -193,12 +209,11 @@ class SwitchTCB(gdb.Command):
   def invoke(self, arg, from_tty):
     argv = gdb.string_to_argv(arg)
     if(len(argv)!=1):
-        print("Please give TCB address (topOfStack) as an hex arg\n");
+        print("Please give Task index as paramter\n");
         return
-    address=int(argv[0],16) # hex
-    print("Adr=0x%x" % address)
     sched = Scheduler()
-    sched.switchTCB(address)
+    task=int(argv[0])
+    sched.switchTCB(task)
     #
 ShowRegistry()
 ShowList()
