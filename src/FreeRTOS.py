@@ -50,6 +50,10 @@ class Scheduler:
       print("Failed to Find Symbol: %s" % readyTasksListsStr)
       raise ValueError("Invalid Symbol!")
 
+  # sort by TCB
+  def sortTCB(self,e):
+    return e[0]
+
   def ShowTaskList(self): 
     self.PrintTableHeader()
     allTasks = []
@@ -81,19 +85,23 @@ class Scheduler:
           tem = [ptr,"Delay1",tcb,None]
           allTasks.append(tem)
 
-    # Todo : Sort them
+    allTasks.sort(key=self.sortTCB)
     # dump thel
     for t in allTasks:
         tcbPointer=t[0]
         status=t[1]
         tcbContent=t[2]
-        current=" "
+        # Current Task, info on the stack are irrelevant
         if(self._currentTCBv == tcbPointer):
             current="*"
-        print("%s TCB: 0x%08x Name:%12s State:%s TopOfStack:0x%08x" % (current, tcbPointer,tcbContent['pcTaskName'].string(), status, tcbContent['pxTopOfStack']))
-
-
-    
+            print("%s TCB: 0x%08x Name:%12s " % (current, tcbPointer,tcbContent['pcTaskName'].string()))
+        else:
+            #where=
+            current=" "
+            stack=tcbContent['pxTopOfStack']
+            where=""
+            print("%s TCB: 0x%08x Name:%12s State:%s TopOfStack:0x%08x" % (current, tcbPointer,tcbContent['pcTaskName'].string(), status, stack))
+            self.getAdditionInfo(stack)
 
   def GetSymbolForAddress(self,adr):
      block = gdb.block_for_pc(adr)
@@ -120,16 +128,8 @@ class Scheduler:
   def PrintTableHeader(self):
     print("%16s %3s %4s" % ("Name", "PRI", "STCK"))
 
-  def PrintTaskFormatted(self, task, itemVal = None,ptr=0):
-    topStack=task['pxTopOfStack']
-    stackBase = task['pxStack']
-    highWater = topStack - stackBase
-    taskName = task['pcTaskName'].string()
-    taskPriority = task['uxPriority']
-    if ( itemVal != None ):
-      print("TCB=0x%08x %16s Pri:%3s High:%4s topOfStack:0x%x val:%5s"  % (ptr,taskName, taskPriority, highWater, topStack, itemVal))
-    else:
-      print("TCB=0x%08x %16s Pri:%3s High:%4s topOfStack:0x%x " % (ptr, taskName, taskPriority, highWater,topStack))
+
+  def getAdditionInfo(self, topStack):
     # Now retrieve actual stack pointer, PC and LR
     # The layout is 
     # Top Base : 8*4 = R4...R11
@@ -144,18 +144,18 @@ class Scheduler:
     PC=self.Read32(importantRegisters+1)
     # This is the address of the user stack, i.e. after the 16 registers saved by FreeRTOS
     actualStack=topStack+16
-    print("\t\t LR=0x%x PC=0x%x SP=0x%x" % (LR, PC, actualStack))
-    #print("\t\t %s" %   self.GetSymbolForAddress(PC))
-    #print("\t\t\t %s" %   self.GetSymbolForAddress(LR))
+    print("\t\t LR=0x%x PC=0x%x SP=0x%x function=%s" % (LR, PC, actualStack,self.GetSymbolForAddress(PC)))
 #
 #
 #
   def switchTCB(self,address):
     print("switch TCB 0x%x " % address)
+    # Dereference address to get stack
+    sp=self.Read32 (address)
     # 1-load registers
     regs=aRegisters()
     print("+++")
-    regs.loadRegistersFromMemory(address) # regs now contains the address
+    regs.loadRegistersFromMemory(sp) # regs now contains the address
     print("+++")
     regs.setCPURegisters()   # set the actual registers
     print("+++")
