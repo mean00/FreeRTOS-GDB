@@ -162,16 +162,18 @@ class Scheduler:
         print("out of range")
         return
     t=self.allTasks[task]
+    # [0] => TCB pointer
+    # [1] => State
+    # [2] => TCB structure 
     if(t[0]==self._currentTCBv):
         print("task already selected")
         return
     tcbContent=t[2]
     stack=tcbContent['pxTopOfStack']
-    sp=stack
     # 1-load registers
     regs=aRegisters()
     print("+++")
-    regs.loadRegistersFromMemory(sp) # regs now contains the address
+    regs.loadRegistersFromMemory(stack) # regs now contains the address
     print("+++")
     regs.setCPURegisters()   # set the actual registers
     print("+++")
