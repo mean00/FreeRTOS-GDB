@@ -10,7 +10,7 @@ to see what they are doing and why they are stuck
 
 The aim is to be similar to the "info thread" "thread x" commands of gdb
 
-Diclaimer : I probably broke the other functions + i'm not a python developper
+Disclaimer : I probably broke the other functions + i'm not a python developper
 
 
 
@@ -18,7 +18,7 @@ Diclaimer : I probably broke the other functions + i'm not a python developper
 
 ##Requirements: 
 
-1. You need to have the python API enabled in your version of GDB. This is a 
+1. You need to have the python *2* API enabled in your version of GDB. This is a 
     compile time option when building GDB. You should be able to do something
 	  like this: 
 ```
@@ -43,7 +43,7 @@ python compiled in your version of GDB.
 
 How To Use: 
 ```
-$> gdb ./bin/program.elf 
+$> gdb ./bin/program.elf (replace by your embedded stuff here)
 (gdb) c 
 Program runs on embedded device, sets up tasks, and queues 
 <Break>
@@ -78,3 +78,5 @@ Now you can use backtrack, up , down etc.. on the 2nd task.
 
 Again, i'm not a python developper, the code is a hack but it does what i needed
 It might be helpful for others
+
+Not sure you can continue after playing with the Tasks. It is more for post mortem analysis
