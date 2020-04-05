@@ -23,6 +23,39 @@ class aRegisters:
         print("** Error **")
         c=0
     return c 
+#
+#
+  def write32bits(self,adr,value):
+    uint_pointer_type = gdb.lookup_type('uint32_t').pointer()
+    gaddress = gdb.Value(adr)
+    paddress = gaddress.cast(uint_pointer_type)
+    print("Write %x at %x" % (value, adr))
+    try:
+        #c=long(paddress.dereference())
+    #    print("=> %x" % c)
+        pass
+    except:
+        print("** Error **")
+
+
+  #
+  # Dump registers to given address
+  # You have to move the stack yourself !
+  #
+  def saveRegisterToMemory(self,adr):
+    # Rewind the stack by  16 registers
+    for i in range(0,8): # R4..R11 => 8 registers
+        self.write32bits(adr+i*4,self.reg[(i+4)])
+    # next are r0 .. r3
+    adr+=8*4
+    for i in range(0,4): # R4..R11 => 8 registers
+        self.write32bits(adr+i*4,self.reg[i])
+    adr+=4*4
+    # Then r12, lr pc psr
+    self.write32bits(adr,self.reg[12])
+    self.write32bits(adr+1*4,self.reg[14])
+    self.write32bits(adr+2*4,self.reg[15])
+    self.write32bits(adr+3*4,self.psr)
 
   # load all the registers from the psp TCB pointer 
   def loadRegistersFromMemory(self,adr):
@@ -60,4 +93,14 @@ class aRegisters:
       r="r"+str(i)
       self.setRegister(r,self.reg[i])
     self.setRegister("xpsr",self.psr)
+  # read the CPU register and update our internal copy with them
+  def getCPURegisters(self):
+    for i in range(0,16):
+      r="r"+str(i)
+      self.reg[i]=long(gdb.selected_frame().read_register(r) )
+      self.reg[i]=self.reg[i] & 0xffffffff # unsigned hack
+    self.psr=gdb.selected_frame().read_register("xpsr")
+    print("Read registers")
+    for i in range(0,16):
+        print("%d: 0x%x" % (i,self.reg[i]))
 

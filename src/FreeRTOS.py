@@ -1,8 +1,10 @@
 # File: FreeRTOS.py
-# Modified by mean00 to add 
-#    * More details on TCB
+# This is the arm without ** FPU ** version of the original freeRTS GDB
+# It was modified by mean00 to add 
+#    * More details on TCB, display similar to info threads
 #    * switchTCB command to switch threads
 #  2020
+# --- Original Header ---
 # Author: Carl Allendorph
 # Date: 05NOV2014 
 #
@@ -161,6 +163,29 @@ class Scheduler:
     if(task>=len(self.allTasks)):
         print("out of range")
         return
+
+    # First save the current task
+    old=aRegisters()
+    old.getCPURegisters()
+    found=None
+    # Search the current TCB
+    for t in self.allTasks:
+        if(t[0]==self._currentTCBv):
+            # got it
+            found=t[2]
+    if( found is None):
+        print("Cannot locate current TCB")
+        return
+    #
+    # Rewind by 4*4*4 bytes = 64 bytes / 16 registers
+    sp=old.reg[13]
+    old.reg[13]-=32
+    sp-=64    
+    # store them
+    old.saveRegisterToMemory(sp) 
+
+
+    return
     t=self.allTasks[task]
     # [0] => TCB pointer
     # [1] => State
