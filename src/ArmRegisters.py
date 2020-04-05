@@ -26,16 +26,13 @@ class aRegisters:
 #
 #
   def write32bits(self,adr,value):
-    uint_pointer_type = gdb.lookup_type('uint32_t').pointer()
-    gaddress = gdb.Value(adr)
-    paddress = gaddress.cast(uint_pointer_type)
-    print("Write %x at %x" % (value, adr))
-    try:
-        #c=long(paddress.dereference())
-    #    print("=> %x" % c)
-        pass
-    except:
-        print("** Error **")
+    adr=long(adr)
+    value=long(value)
+    #print(adr)
+    #print(value)
+    st="set {int}"+hex(adr)+" = " +hex(value)
+    #print(st)
+    gdb.execute(st) 
 
 
   #
@@ -99,7 +96,7 @@ class aRegisters:
       r="r"+str(i)
       self.reg[i]=long(gdb.selected_frame().read_register(r) )
       self.reg[i]=self.reg[i] & 0xffffffff # unsigned hack
-    self.psr=gdb.selected_frame().read_register("xpsr")
+    self.psr=long(gdb.selected_frame().read_register("xpsr"))
     print("Read registers")
     for i in range(0,16):
         print("%d: 0x%x" % (i,self.reg[i]))

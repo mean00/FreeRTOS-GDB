@@ -39,6 +39,7 @@ class Scheduler:
     self._currentTCB,tcbMethod=gdb.lookup_symbol("pxCurrentTCB")
     if( self._currentTCB != None):
         self._currentTCBv=self._currentTCB.value()
+    self._currentTCBAddress= gdb.parse_and_eval("pxCurrentTCB").address
      # Ready 
     readyListsSym,methodType = gdb.lookup_symbol(readyTasksListsStr)
     if ( readyListsSym != None ): 
@@ -183,9 +184,8 @@ class Scheduler:
     sp-=64    
     # store them
     old.saveRegisterToMemory(sp) 
-
-
-    return
+    # update xtopStack with new value
+    old.write32bits(self._currentTCBv,old.reg[13])
     t=self.allTasks[task]
     # [0] => TCB pointer
     # [1] => State
@@ -200,6 +200,9 @@ class Scheduler:
     regs.loadRegistersFromMemory(stack) # regs now contains the address
     regs.setCPURegisters()   # set the actual registers
 
+    # update pxCurrentTCB
+    print("Updating current TCB to %x" % t[0])
+    regs.write32bits( self._currentTCBAddress,t[0]) 
 #
 #
 #
