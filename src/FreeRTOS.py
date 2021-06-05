@@ -1,6 +1,6 @@
 # File: FreeRTOS.py
-# This is the arm without ** FPU ** version of the original freeRTS GDB
-# It was modified by mean00 to add 
+# This is the gd32vf103 riscv version of the original freeRTS GDB
+# It was modified by mean00 / in 2021 to add 
 #    * More details on TCB, display similar to info threads
 #    * switchTCB command to switch threads
 #  2020
@@ -17,6 +17,7 @@
 
 import gdb
 import pprint
+import sys
 from Types import StdTypes 
 from List import ListInspector 
 from GDBCommands import ShowHandleName, ShowRegistry, ShowList
@@ -130,9 +131,10 @@ class Scheduler:
     gaddress = gdb.Value(address)
     paddress = gaddress.cast(uint_pointer_type)
     try:
-        c=long(paddress.dereference())
-    except:
-        print("*Error *")
+        c=int(paddress.dereference())
+    except Exception as inst:
+        print(type(inst))    # the exception instance
+        print("*Error  reading address 0x%x " % (address))
         c=0
     return c 
 
@@ -140,21 +142,31 @@ class Scheduler:
 #
 #
   def getAdditionInfo(self, topStack):
-    # Now retrieve actual stack pointer, PC and LR
-    # The layout is 
-    # Top Base : 8*4 = R4...R11
-    #            4*4 = R0...R3
-    #            1*4 = R12
-    #            1*4 = LR
-    #            1*4 = PC
-    #            1*4 = PSR
-    #print("base 0x%x" % (topStack))
-    importantRegisters=topStack+(13) # skip registers
-    LR=self.Read32(importantRegisters)
-    PC=self.Read32(importantRegisters+1)
+    # Now retrieve actual data from TCP 
+    # The stack layout is 
+    #  Total 36 registers
+    #     1: x1  <= SP => first fireld of TCB
+    #     2: x2
+    # ....
+    #    31: x31
+    #    32: MSTATUS
+    #    33: MEPC
+    #    34: MSUBM
+    #    35: MCAUSE
+    #    
+    #
+    #print("base 0x%x" % (topStack))    
+    #print("\t\t  topStack=0x%x  " % ( topStack))
+    #for i in range(0,36):
+        #adr=topStack+(i)
+        #reg=self.Read32(adr)
+        #print("\t\t  reg=0x%x val=0x%x " % (i, reg))
+        
+    importantRegisters=topStack+(33) # skip registers
+    PC=self.Read32(importantRegisters)
     # This is the address of the user stack, i.e. after the 16 registers saved by FreeRTOS
-    actualStack=topStack+16
-    print("\t\t LR=0x%x PC=0x%x SP=0x%x function=%s" % (LR, PC, actualStack,self.GetSymbolForAddress(PC)))
+    actualStack=topStack+36
+    print("\t\t  PC=0x%x SP=0x%x function=%s" % (PC, actualStack,self.GetSymbolForAddress(PC)))
 #
 #
 #
