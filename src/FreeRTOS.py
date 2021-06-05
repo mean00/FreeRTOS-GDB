@@ -217,13 +217,16 @@ class Scheduler:
     regs.setCPURegisters()   # set the actual registers
 
     # now we exit interrupt mode    
-    regs.returnFromException()
 
     
     # update pxCurrentTCB
     #print("Updating current TCB to %x" % t[0])
     regs.write32bits( self._currentTCBAddress,t[0]) 
 #
+  def returnFromException(self):
+    regs=aRegisters()
+    regs.getCPURegisters()
+    regs.returnFromException()
 #
 #
 #
@@ -262,10 +265,25 @@ class SwitchTCB(gdb.Command):
     task=int(argv[0])
     sched.switchTCB(task)
     #
+class ReturnFromException(gdb.Command):
+  """ Return from the current exception 
+  """
+  def __init__(self):
+    super(ReturnFromException, self).__init__(
+      "ReturnFromException", 
+      gdb.COMMAND_SUPPORT
+      )
+
+  def invoke(self, arg, from_tty):
+    argv = gdb.string_to_argv(arg)
+    sched = Scheduler()
+    sched.returnFromException()
+    #
 ShowRegistry()
 ShowList()
 ShowTaskList()
 ShowHandleName()
 ShowQueueInfo()
 SwitchTCB()
+ReturnFromException()
 

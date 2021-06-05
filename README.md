@@ -14,6 +14,10 @@ then
 show TaskList to show the tasks
 switchTCB xxx to switch to task xxx
 
+If you switch to a task that was not the running task, you'll probably want to do
+ReturnFromException
+so that you end up in the calling context
+You cannot easily reverto the original running task !
 
 
 
