@@ -1,16 +1,20 @@
-armFreeRTOS-GDB
+rv32FreeRTOS-GDB
 ================
 
 Intro by mean00:
 
 This is a modified version of FreeRTOS-GDB (https://github.com/autolycus/FreeRTOS-GDB) for my needs
-Bottom line, i use a blackmagic clone debugger and it does not support FreeRTOS
-I just want to have backtrack for all the tasks on the system
-to see what they are doing and why they are stuck
+It is tuned for the GD32VF103 + the FreeRTOS port i use , NOT the freeRTOS from sipeed. 
+The register stacking is different !
 
-The aim is to be similar to the "info thread" "thread x" commands of gdb
+when starting gdb do a 
+source path to the ....rv32FreeRTOS..../src/FreeRTOS.py
+do your stuff
+then
+show TaskList to show the tasks
+switchTCB xxx to switch to task xxx
 
-Disclaimer : I probably broke the other functions + i'm not a python developper
+
 
 
 

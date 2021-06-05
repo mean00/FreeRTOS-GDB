@@ -22,7 +22,7 @@ from Types import StdTypes
 from List import ListInspector 
 from GDBCommands import ShowHandleName, ShowRegistry, ShowList
 from GDBCommands import ShowQueueInfo
-from ArmRegisters import aRegisters
+from rv32Registers import aRegisters
 
 #
 # Helper class to deal with registers
@@ -178,8 +178,11 @@ class Scheduler:
         return
 
     # First save the current task
+    #print("2\n")
     old=aRegisters()
+    #print("3\n")
     old.getCPURegisters()
+    #print("4\n")
     found=None
     # Search the current TCB
     for t in self.allTasks:
@@ -190,13 +193,15 @@ class Scheduler:
         print("Cannot locate current TCB")
         return
     #
-    # Rewind by 4*4*4 bytes = 64 bytes / 16 registers
-    sp=old.reg[13]
-    sp-=64    
+    # Rewind by 36*4 bytes
+    sp=old.reg[36] # this is current SP
+    #print("current SP 0x%x " % sp)
+    sp-=36*4    
+    #print("new SP 0x%x " % sp)
     # store them
     old.saveRegisterToMemory(sp) 
     # update xtopStack with new value
-    old.write32bits(self._currentTCBv,old.reg[13]-64)
+    old.write32bits(self._currentTCBv,sp)
     t=self.allTasks[task]
     # [0] => TCB pointer
     # [1] => State
@@ -211,8 +216,12 @@ class Scheduler:
     regs.loadRegistersFromMemory(stack) # regs now contains the address
     regs.setCPURegisters()   # set the actual registers
 
+    # now we exit interrupt mode    
+    regs.returnFromException()
+
+    
     # update pxCurrentTCB
-    print("Updating current TCB to %x" % t[0])
+    #print("Updating current TCB to %x" % t[0])
     regs.write32bits( self._currentTCBAddress,t[0]) 
 #
 #
