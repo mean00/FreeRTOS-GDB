@@ -1,12 +1,10 @@
-#
-  # The stack layout is 
-  #  Total 36 registers
-  #  00: MEPC
-#    01: x1
-#    28: x28
-#    29: MSTATUS
-# SP is register 36
-#
+#    31: x31
+#    32: MSTATUS
+#    33: MEPC
+#    34: MSUBM
+#    35: MCAUSE
+#    36: SP
+
 import gdb
 import pprint
 from Types import StdTypes 
@@ -56,28 +54,27 @@ class aRegisters:
   #
   # The stack layout is 
   #  Total 36 registers
-  #     0: MEPC
-  #     1: x1  
+  #     1: x1  <= SP => first fireld of TCB
   #     2: x2
   # ....
-  #    28: x28
-  #    29: MSTATUS
+  #    31: x31
+  #    32: MSTATUS
+  #    33: MEPC
+  #    34: MSUBM
+  #    35: MCAUSE
 
   def saveRegisterToMemory(self,adr):
   #__________________
     #print("Saving regiseter to 0x%x\n" % (adr))
-    self.write32bits(adr,self.reg[(0)]) # MEPC
-    for i in range(1,29): # skip x0
+    for i in range(1,36): # skip x0
         self.write32bits(adr+i*4,self.reg[(i)])
-    self.write32bits(adr+30*4,self.reg[(30)]) # MSTATUS
   # load all the registers from the psp TCB pointer 
   def loadRegistersFromMemory(self,adr):
   #__________________
     #print('****')
     #print(" load register from 0x%x\n" % (adr))
-    for i in range(0,30): # R4..R11 => 8 registers
+    for i in range(1,36): # R4..R11 => 8 registers
         self.reg[i]=self.read32bits(adr+i) # NOT *4!
-    self.reg[36]=adr+30
     #self.dumpRegisters()
 #
 #
@@ -96,31 +93,30 @@ class aRegisters:
   def setCPURegisters(self):
   #__________________
     #print("E\n")
-    for i in range(1,29):
+    for i in range(1,32):
       r="x"+str(i)
       self.setRegister(r,self.reg[i])
    # Now MSTATUS etcx..
-    self.setRegister("mstatus",self.reg[29])
-    self.setRegister("mepc",self.reg[0])
-    self.setRegister("sp",self.reg[36])
+    self.setRegister("mstatus",self.reg[32])
+    self.setRegister("mepc",self.reg[33])
     #self.setRegister("msubm",self.reg[34])
-    #self.setRegister("mcause",self.reg[35])
+    self.setRegister("mcause",self.reg[35])
     #print("E\n")
 
   # read the CPU register and update our internal copy with them
   def getCPURegisters(self):
   #__________________
     #print("GA\n")
-    for i in range(1,29):
+    for i in range(1,32):
       r="x"+str(i)
     #  print("G"+r+"\n")
       self.reg[i]=int(gdb.selected_frame().read_register(r) )
       self.reg[i]=self.reg[i] & 0xffffffff # unsigned hack
     # Now do mstatus mpec msubm mcause
-    self.reg[29]=int(gdb.selected_frame().read_register("mstatus"))
-    self.reg[0]=int(gdb.selected_frame().read_register("mepc"))
+    self.reg[32]=int(gdb.selected_frame().read_register("mstatus"))
+    self.reg[33]=int(gdb.selected_frame().read_register("mepc"))
     #self.reg[34]=int(gdb.selected_frame().read_register("msubm"))
-    #self.reg[35]=int(gdb.selected_frame().read_register("mcause"))
+    self.reg[35]=int(gdb.selected_frame().read_register("mcause"))
     self.reg[36]=int(gdb.selected_frame().read_register("sp"))
     #print("G\n")
 

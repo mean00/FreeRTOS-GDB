@@ -162,10 +162,10 @@ class Scheduler:
         #reg=self.Read32(adr)
         #print("\t\t  reg=0x%x val=0x%x " % (i, reg))
         
-    importantRegisters=topStack+(0) # skip registers
+    importantRegisters=topStack+(33) # skip registers
     PC=self.Read32(importantRegisters)
     # This is the address of the user stack, i.e. after the 16 registers saved by FreeRTOS
-    actualStack=topStack+30
+    actualStack=topStack+36
     print("\t\t  PC=0x%x SP=0x%x function=%s" % (PC, actualStack,self.GetSymbolForAddress(PC)))
 #
 #
@@ -196,7 +196,7 @@ class Scheduler:
     # Rewind by 36*4 bytes
     sp=old.reg[36] # this is current SP
     #print("current SP 0x%x " % sp)
-    sp-=30*4    
+    sp-=36*4    
     #print("new SP 0x%x " % sp)
     # store them
     old.saveRegisterToMemory(sp) 
